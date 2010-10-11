@@ -2,7 +2,8 @@
 
 ;; Author: Hayashi Masahiro <mhayashi1120@gmail.com>
 ;; Keywords: csv parse rfc4180
-;; URL: http://github.com/mhayashi1120/Emacs-Lisp/raw/master/pcsv.el
+;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
+;; URL: http://www.emacswiki.org/emacs/download/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
 
 ;; This program is free software; you can redistribute it and/or
@@ -32,7 +33,14 @@
 ;;
 ;;     (require 'pcsv)
 
+;;; Usage:
+
+;; Use `pcsv-parse-buffer', `pcsv-parse-file', `pcsv-parse-region' functions
+;; to parse csv.
+
 ;;; Code:
+
+(defvar pcsv-eobp)
 
 (defun pcsv-parse-buffer (&optional buffer)
   "Parse a current buffer as a csv.
@@ -48,8 +56,6 @@ BUFFER non-nil means parse buffer instead of current buffer."
     (let ((coding-system-for-read coding-system))
       (insert-file-contents file))
     (pcsv-parse-region (point-min) (point-max))))
-
-(defvar pcsv-eobp)
 
 (defun pcsv-parse-region (start end)
   "Parse region as a csv."
@@ -112,29 +118,29 @@ BUFFER non-nil means parse buffer instead of current buffer."
 ;; unit test
 ;;
 
-(when (require 'el-expectations nil t)
-  (defun pcsv-test-get (csv-string)
-    (with-temp-buffer
-      (insert csv-string)
-      (pcsv-parse-buffer)))
+(dont-compile
+  (when (fboundp 'expectations)
+    (defun pcsv-test-get (csv-string)
+      (with-temp-buffer
+	(insert csv-string)
+	(pcsv-parse-buffer)))
 
-  (dont-compile
     (expectations 
-      (expect '()
-	(pcsv-test-get ""))
-      (expect '((""))
-	(pcsv-test-get "\n"))
-      (expect '(("a"))
-	(pcsv-test-get "a\n"))
-      (expect '(("a"))
-	(pcsv-test-get "a"))
-      (expect '(("a" ""))
-      	(pcsv-test-get "a,"))
-      (expect '(("a" "b" "c") ("a,a" "bb\n" "c,\nc") ("\"aaa\"" ",\","))
-	(pcsv-test-get "a,b,c\n\"a,a\",\"bb\n\",\"c,\nc\"\n\"\"\"aaa\"\"\",\",\"\",\"\n"))
-      (expect (error invalid-read-syntax)
-	(pcsv-test-get "\"a"))
-      )))
+     (expect '()
+	     (pcsv-test-get ""))
+     (expect '((""))
+	     (pcsv-test-get "\n"))
+     (expect '(("a"))
+	     (pcsv-test-get "a\n"))
+     (expect '(("a"))
+	     (pcsv-test-get "a"))
+     (expect '(("a" ""))
+	     (pcsv-test-get "a,"))
+     (expect '(("a" "b" "c") ("a,a" "bb\n" "c,\nc") ("\"aaa\"" ",\","))
+	     (pcsv-test-get "a,b,c\n\"a,a\",\"bb\n\",\"c,\nc\"\n\"\"\"aaa\"\"\",\",\"\",\"\n"))
+     (expect (error invalid-read-syntax)
+	     (pcsv-test-get "\"a"))
+     )))
 ;; (expectations-execute)
 
 (provide 'pcsv)
