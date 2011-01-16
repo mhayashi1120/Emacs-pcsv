@@ -40,7 +40,11 @@
 
 ;;; Code:
 
+(defvar pcsv-separator ?,)
+
 (defvar pcsv-eobp)
+(defvar pcsv-quoted-value-regexp)
+(defvar pcsv-value-regexp)
 
 (defun pcsv-parse-buffer (&optional buffer)
   "Parse a current buffer as a csv.
@@ -59,7 +63,9 @@ BUFFER non-nil means parse buffer instead of current buffer."
 
 (defun pcsv-parse-region (start end)
   "Parse region as a csv."
-  (let (pcsv-eobp)
+  (let ((pcsv-quoted-value-regexp  (pcsv-quoted-value-regexp))
+        (pcsv-value-regexp (pcsv-value-regexp))
+        pcsv-eobp)
     (save-excursion
       (save-restriction
 	(narrow-to-region start end)
@@ -74,23 +80,29 @@ BUFFER non-nil means parse buffer instead of current buffer."
 	    (setq ret (cons (nreverse line) ret)))
 	  (nreverse ret))))))
 
+(defun pcsv-quoted-value-regexp ()
+  (format "\"\\(\\(?:\"\"\\|[^\"]\\)*\\)\"\\(?:%c\\|\n\\|$\\)" pcsv-separator))
+
+(defun pcsv-value-regexp ()
+  (format "\\([^\n%c]*\\)\\(?:%c\\|\n\\|$\\)" pcsv-separator pcsv-separator))
+
 (defun pcsv-read ()
   (cond 
    ((and (not pcsv-eobp)
 	 (eobp)
 	 (char-before)
-	 (= (char-before) ?,))
+	 (= (char-before) pcsv-separator))
     (setq pcsv-eobp t)
     "")
    ((eobp)
     nil)
    ((looking-at "\"")
-    (unless (looking-at "\"\\(\\(?:\"\"\\|[^\"]\\)*\\)\"\\(?:,\\|\n\\|$\\)")
+    (unless (looking-at pcsv-quoted-value-regexp)
       (signal 'invalid-read-syntax nil))
     (prog1 
 	(pcsv-unquote-string (match-string 1))
       (goto-char (match-end 0))))
-   ((looking-at "\\([^\n,]*\\)\\(?:,\\|\n\\|$\\)")
+   ((looking-at pcsv-value-regexp)
     (prog1
 	(match-string 1)
       (goto-char (match-end 0))))
