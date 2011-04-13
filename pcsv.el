@@ -1,6 +1,6 @@
 ;;; pcsv.el --- Parser of csv
 
-;; Author: Hayashi Masahiro <mhayashi1120@gmail.com>
+;; Author: Masahiro Hayashi <mhayashi1120@gmail.com>
 ;; Keywords: csv parse rfc4180
 ;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; URL: http://www.emacswiki.org/emacs/download/pcsv.el
