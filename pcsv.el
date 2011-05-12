@@ -154,6 +154,7 @@ BUFFER non-nil means parse buffer instead of current buffer."
      (expect (error invalid-read-syntax)
 	     (pcsv-test-get "\"a"))
      )))
+;; (progn (require 'el-expectations))
 ;; (expectations-execute)
 
 (provide 'pcsv)
