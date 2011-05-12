@@ -5,7 +5,7 @@
 ;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; URL: http://www.emacswiki.org/emacs/download/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version 1.0.0
+;; Version 1.0.1
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -124,38 +124,6 @@ BUFFER non-nil means parse buffer instead of current buffer."
 	(setq ret (cons (car list) ret))))
       (setq list (cdr list)))
     (concat (nreverse ret))))
-
-
-
-;;
-;; unit test
-;;
-
-(dont-compile
-  (when (fboundp 'expectations)
-    (defun pcsv-test-get (csv-string)
-      (with-temp-buffer
-	(insert csv-string)
-	(pcsv-parse-buffer)))
-
-    (expectations 
-     (expect '()
-	     (pcsv-test-get ""))
-     (expect '((""))
-	     (pcsv-test-get "\n"))
-     (expect '(("a"))
-	     (pcsv-test-get "a\n"))
-     (expect '(("a"))
-	     (pcsv-test-get "a"))
-     (expect '(("a" ""))
-	     (pcsv-test-get "a,"))
-     (expect '(("a" "b" "c") ("a,a" "bb\n" "c,\nc") ("\"aaa\"" ",\","))
-	     (pcsv-test-get "a,b,c\n\"a,a\",\"bb\n\",\"c,\nc\"\n\"\"\"aaa\"\"\",\",\"\",\"\n"))
-     (expect (error invalid-read-syntax)
-	     (pcsv-test-get "\"a"))
-     )))
-;; (progn (require 'el-expectations))
-;; (expectations-execute)
 
 (provide 'pcsv)
 
