@@ -5,7 +5,7 @@
 ;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; URL: http://www.emacswiki.org/emacs/download/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version 1.0.1
+;; Version 1.1.0
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -41,6 +41,9 @@
 
 ;;; Code:
 
+(eval-when-compile
+  (require 'cl))
+
 (defvar pcsv-separator ?,)
 
 (defvar pcsv-eobp)
@@ -64,22 +67,24 @@ BUFFER non-nil means parse buffer instead of current buffer."
 
 (defun pcsv-parse-region (start end)
   "Parse region as a csv."
-  (let ((pcsv-quoted-value-regexp  (pcsv-quoted-value-regexp))
-        (pcsv-value-regexp (pcsv-value-regexp))
-        pcsv-eobp)
-    (save-excursion
-      (save-restriction
-	(narrow-to-region start end)
-	(goto-char (point-min))
-	(let (v line ret)
-	  (while (setq v (pcsv-read))
-	    (setq line (cons v line))
-	    (when (bolp)
-	      (setq ret (cons (nreverse line) ret))
-	      (setq line nil)))
-	  (when line
-	    (setq ret (cons (nreverse line) ret)))
-	  (nreverse ret))))))
+  (save-excursion
+    (save-restriction
+      (narrow-to-region start end)
+      (pcsv-map 'identity))))
+
+(defun pcsv-map (function)
+  (save-excursion
+    (let ((pcsv-quoted-value-regexp  (pcsv-quoted-value-regexp))
+          (pcsv-value-regexp (pcsv-value-regexp))
+          pcsv-eobp)
+      (goto-char (point-min))
+      (loop until (eobp)
+            collect (funcall function
+                             (loop with v = nil
+                                   while (setq v (pcsv-read))
+                                   collect v into line
+                                   until (bolp)
+                                   finally return line))))))
 
 (defun pcsv-quoted-value-regexp ()
   (format "\"\\(\\(?:\"\"\\|[^\"]\\)*\\)\"\\(?:%c\\|\n\\|$\\)" pcsv-separator))
@@ -112,18 +117,13 @@ BUFFER non-nil means parse buffer instead of current buffer."
     (signal 'invalid-read-syntax nil))))
 
 (defun pcsv-unquote-string (string)
-  (let ((list (string-to-list string))
-	ret)
-    (while list
-      (cond
-       ((and (eq (car list) ?\")
-	     (eq (cadr list) ?\"))
-	(setq ret (cons (car list) ret))
-	(setq list (cdr list)))
-       (t
-	(setq ret (cons (car list) ret))))
-      (setq list (cdr list)))
-    (concat (nreverse ret))))
+  (loop for i on (string-to-list string)
+        by (lambda (x) (if (and (eq (car x) ?\")
+                                (eq (cadr x) ?\"))
+                           (cddr x)
+                         (cdr x)))
+        collect (car i) into res
+        finally return (concat res))))
 
 (provide 'pcsv)
 
