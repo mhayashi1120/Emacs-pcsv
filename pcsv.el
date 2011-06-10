@@ -123,7 +123,7 @@ BUFFER non-nil means parse buffer instead of current buffer."
                            (cddr x)
                          (cdr x)))
         collect (car i) into res
-        finally return (concat res))))
+        finally return (concat res)))
 
 (provide 'pcsv)
 
