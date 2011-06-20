@@ -4,7 +4,7 @@
 ;; Keywords: csv parse rfc4180
 ;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version 1.1.0
+;; Version: 1.1.0
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
