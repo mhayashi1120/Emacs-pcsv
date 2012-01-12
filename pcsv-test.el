@@ -1,4 +1,4 @@
-(require 'el-expectations)
+(require 'ert)
 (require 'pcsv)
 
 (defun pcsv-test-get (csv-string)
@@ -6,21 +6,19 @@
     (insert csv-string)
     (pcsv-parse-buffer)))
 
-(expectations 
-  (expect '()
-    (pcsv-test-get ""))
-  (expect '((""))
-    (pcsv-test-get "\n"))
-  (expect '(("a"))
-    (pcsv-test-get "a\n"))
-  (expect '(("a"))
-    (pcsv-test-get "a"))
-  (expect '(("a" ""))
-    (pcsv-test-get "a,"))
-  (expect '(("a" "b" "c") ("a,a" "bb\n" "c,\nc") ("\"aaa\"" ",\","))
-    (pcsv-test-get "a,b,c\n\"a,a\",\"bb\n\",\"c,\nc\"\n\"\"\"aaa\"\"\",\",\"\",\"\n"))
-  (expect (error invalid-read-syntax)
-    (pcsv-test-get "\"a"))
-  )
+(ert-deftest pcsv-normal-test ()
+  "Normal csv"
+  :tags '(pcsv)
+  (should (equal (pcsv-test-get "") '()))
+  (should (equal (pcsv-test-get "\n") '((""))))
+  (should (equal (pcsv-test-get "a\n") '(("a"))))
+  (should (equal (pcsv-test-get "a") '(("a"))))
+  (should (equal (pcsv-test-get "a,") '(("a" ""))))
+  (should (equal (pcsv-test-get
+                  "a,b,c\n\"a,a\",\"bb\n\",\"c,\nc\"\n\"\"\"aaa\"\"\",\",\"\",\"\n") 
+                 '(("a" "b" "c") ("a,a" "bb\n" "c,\nc") ("\"aaa\"" ",\",")))))
 
-(expectations-execute)
+(ert-deftest pcsv-normal-test ()
+  "Invalid csv"
+  :tags '(pcsv)
+  (should-error (pcsv-test-get "\"a") :type 'invalid-read-syntax))
