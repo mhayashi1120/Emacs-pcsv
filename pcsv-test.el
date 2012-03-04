@@ -24,7 +24,7 @@
   (should-error (pcsv-test-get "\"a") :type 'invalid-read-syntax))
 
 (ert-deftest pcsv-overflow-test ()
-  "Check regexp overflow."
+  "Check handling huge input."
   :tags '(pcsv)
   (should (pcsv-test-get (make-string (ash 1 10) ?a)))
   (should (pcsv-test-get (make-string (ash 1 20) ?a))))
