@@ -4,7 +4,7 @@
 ;; Keywords: csv parse rfc4180
 ;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version: 1.1.0
+;; Version: 1.2.0
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -40,22 +40,13 @@
 
 ;;; Code:
 
-(eval-when-compile
-  (require 'cl))
-
 (defvar pcsv-separator ?,)
-
-(defvar pcsv-eobp)
-(defvar pcsv-quoted-value-regexp)
-(defvar pcsv-value-regexp)
 
 (defun pcsv-parse-buffer (&optional buffer)
   "Parse a current buffer as a csv.
 BUFFER non-nil means parse buffer instead of current buffer."
   (with-current-buffer (or buffer (current-buffer))
-    (save-restriction
-      (widen)
-      (pcsv-parse-region (point-min) (point-max)))))
+    (pcsv-parse-region (point-min) (point-max))))
 
 (defun pcsv-parse-file (file &optional coding-system)
   "Parse FILE as a csv file."
@@ -73,56 +64,82 @@ BUFFER non-nil means parse buffer instead of current buffer."
 
 (defun pcsv-map (function)
   (save-excursion
-    (let ((pcsv-quoted-value-regexp  (pcsv-quoted-value-regexp))
-          (pcsv-value-regexp (pcsv-value-regexp))
-          pcsv-eobp)
+    (let (lis)
       (goto-char (point-min))
-      (loop until (eobp)
-            collect (funcall function
-                             (loop with v = nil
-                                   while (setq v (pcsv-read))
-                                   collect v into line
-                                   until (bolp)
-                                   finally return line))))))
+      (while (not (eobp))
+        (setq lis (cons
+                   (funcall function (pcsv-read-line))
+                   lis)))
+      (nreverse lis))))
 
-(defun pcsv-quoted-value-regexp ()
-  (format "\"\\(\\(?:\"\"\\|[^\"]\\)*\\)\"\\(?:%c\\|\n\\|$\\)" pcsv-separator))
+(defvar pcsv--eobp)
+(defvar pcsv--quoting-read)
 
-(defun pcsv-value-regexp ()
-  (format "\\([^\n%c]*\\)\\(?:%c\\|\n\\|$\\)" pcsv-separator pcsv-separator))
+(defun pcsv-peek ()
+  (char-after))
+
+(defun pcsv-read-line ()
+  (let (pcsv--eobp v lis)
+    (while (and (or (null v) (not (bolp)))
+                (setq v (pcsv-read)))
+      (setq lis (cons v lis)))
+    (nreverse lis)))
+
+(defun pcsv-read-char ()
+  (cond
+   ((eobp)
+    (when pcsv--quoting-read
+      ;; must be ended before call this function.
+      (signal 'invalid-read-syntax
+              (list "Unexpected end of buffer")))
+    nil)
+   (t
+    (forward-char)
+    (let* ((c (char-before)))
+      (cond
+       ((null c))
+       ((and pcsv--quoting-read (eq c ?\"))
+        (let ((c2 (pcsv-peek)))
+          (cond
+           ((eq ?\" c2)
+            (forward-char)
+            (setq c ?\"))
+           ((memq c2 `(,pcsv-separator ?\n))
+            (forward-char)
+            (setq c nil))
+           ((null c2)
+            ;; end of buffer
+            (setq c nil))
+           (t
+            (signal 'invalid-read-syntax 
+                    (list (format "Expected `\"' but got `%c'" c2)))))))
+       ((null pcsv--quoting-read)
+        (cond
+         ((eq c pcsv-separator)
+          (setq c nil))
+         ((eq c ?\n)
+          (setq c nil)))))
+      c))))
 
 (defun pcsv-read ()
-  (cond 
-   ((and (not pcsv-eobp)
-	 (eobp)
-	 (char-before)
-	 (= (char-before) pcsv-separator))
-    (setq pcsv-eobp t)
-    "")
-   ((eobp)
-    nil)
-   ((looking-at "\"")
-    (unless (looking-at pcsv-quoted-value-regexp)
-      (signal 'invalid-read-syntax nil))
-    (prog1 
-	(pcsv-unquote-string (match-string 1))
-      (goto-char (match-end 0))))
-   ((looking-at pcsv-value-regexp)
-    (prog1
-	(match-string 1)
-      (goto-char (match-end 0))))
-   (t
-    ;; never through here.
-    (signal 'invalid-read-syntax nil))))
-
-(defun pcsv-unquote-string (string)
-  (loop for i on (string-to-list string)
-        by (lambda (x) (if (and (eq (car x) ?\")
-                                (eq (cadr x) ?\"))
-                           (cddr x)
-                         (cdr x)))
-        collect (car i) into res
-        finally return (concat res)))
+  (let ((c (pcsv-peek))
+        lis)
+    (cond
+     ((null c)
+      ;; handling last line has no newline
+      (cond
+       (pcsv--eobp nil)
+       ((= (char-before) pcsv-separator)
+        (setq pcsv--eobp t)
+        "")))
+     (t
+      (let ((pcsv--quoting-read 
+             (when (eq c ?\")
+               (forward-char)
+               t)))
+        (while (setq c (pcsv-read-char))
+          (setq lis (cons c lis))))
+      (concat (nreverse lis))))))
 
 (provide 'pcsv)
 
