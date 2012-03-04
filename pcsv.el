@@ -111,7 +111,7 @@ BUFFER non-nil means parse buffer instead of current buffer."
             ;; end of buffer
             (setq c nil))
            (t
-            (signal 'invalid-read-syntax 
+            (signal 'invalid-read-syntax
                     (list (format "Expected `\"' but got `%c'" c2)))))))
        ((null pcsv--quoting-read)
         (cond
@@ -133,7 +133,7 @@ BUFFER non-nil means parse buffer instead of current buffer."
         (setq pcsv--eobp t)
         "")))
      (t
-      (let ((pcsv--quoting-read 
+      (let ((pcsv--quoting-read
              (when (eq c ?\")
                (forward-char)
                t)))
