@@ -4,7 +4,7 @@
 ;; Keywords: csv parse rfc4180
 ;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version: 1.2.0
+;; Version: 1.2.1
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -42,12 +42,14 @@
 
 (defvar pcsv-separator ?,)
 
+;;;###autoload
 (defun pcsv-parse-buffer (&optional buffer)
   "Parse a current buffer as a csv.
 BUFFER non-nil means parse buffer instead of current buffer."
   (with-current-buffer (or buffer (current-buffer))
     (pcsv-parse-region (point-min) (point-max))))
 
+;;;###autoload
 (defun pcsv-parse-file (file &optional coding-system)
   "Parse FILE as a csv file."
   (with-temp-buffer
@@ -55,6 +57,7 @@ BUFFER non-nil means parse buffer instead of current buffer."
       (insert-file-contents file))
     (pcsv-parse-region (point-min) (point-max))))
 
+;;;###autoload
 (defun pcsv-parse-region (start end)
   "Parse region as a csv."
   (save-excursion
