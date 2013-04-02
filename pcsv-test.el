@@ -59,7 +59,14 @@
       (should (equal (funcall parser) '("あ" "い" "う")))
       (should (equal (funcall parser) '("A" "B" "C")))
       (should-not (funcall parser)))
+    ;; check broken char in a file read.
     (let ((parser (pcsv-file-parser file 'euc-jp 1)))
+      (should (equal (funcall parser) '("あ" "い" "う")))
+      (funcall parser t)
+      ;; raise no error
+      (should-not (funcall parser)))
+    ;; check detect coding system (euc-jp)
+    (let ((parser (pcsv-file-parser file nil 1)))
       (should (equal (funcall parser) '("あ" "い" "う")))
       (funcall parser t)
       ;; raise no error
