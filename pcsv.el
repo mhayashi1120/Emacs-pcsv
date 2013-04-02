@@ -4,7 +4,7 @@
 ;; Keywords: data
 ;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version: 1.3.0
+;; Version: 1.3.1
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -113,81 +113,88 @@ Example:
   (unless (file-exists-p file)
     (error "File is not exists %s" file))
   (when (and block-size
-            (not (plusp block-size)))
+             (not (plusp block-size)))
     (error "Not a valid block size %s" block-size))
-  (let* ((buffer (generate-new-buffer (format " *pcsv parse %s* " file)))
+  (let* ((bufname (format " *pcsv parse %s* " file))
+         (buffer (generate-new-buffer bufname))
+         (block-reader
+          (pcsv--file-reader buffer file coding-system block-size))
          eof reach-to-end)
-    (let ((block-reader
-           (with-current-buffer buffer
-             (pcsv--file-reader file coding-system block-size))))
-      (lambda (&optional close)
-        (cond
-         (close
-          (kill-buffer buffer))
-         ((not (buffer-live-p buffer))
-          nil)
-         (reach-to-end
-          (kill-buffer buffer)
-          nil)
-         (t
-          (with-current-buffer buffer
-            (let (line)
-              ;; initialize
-              (setq eof (funcall block-reader))
-              (while (catch 'fallback
-                       (goto-char (point-min))
-                       (setq line (pcsv-read-line))
-                       ;; After `pcsv-read-line' must point to bol.
-                       ;; but last line may not have newline
-                       (when (and (not eof)
-                                  (not (bolp)))
-                         ;; retry read and fallback
-                         (setq eof (funcall block-reader))
-                         (throw 'fallback t))
-                       ;; delete parsed csv line
-                       (delete-region (point-min) (point))
-                       nil))
-              (when (and eof (zerop (buffer-size)))
-                (setq reach-to-end t))
-              line))))))))
+    (lambda (&optional close)
+      (cond
+       (close
+        (kill-buffer buffer))
+       ((not (buffer-live-p buffer))
+        nil)
+       (reach-to-end
+        (kill-buffer buffer)
+        nil)
+       (t
+        ;; initialize
+        (when (zerop (buffer-size buffer))
+          (setq eof (funcall block-reader)))
+        (with-current-buffer buffer
+          (let (line)
+            (while (catch 'fallback
+                     (goto-char (point-min))
+                     (setq line (condition-case nil
+                                    (pcsv-read-line)
+                                  (invalid-read-syntax nil)))
+                     ;; After `pcsv-read-line' must point to bol.
+                     ;; but last line may not have newline
+                     (when (and (not eof)
+                                (not (bolp)))
+                       ;; retry read and fallback
+                       (setq eof (funcall block-reader))
+                       (throw 'fallback t))
+                     ;; delete parsed csv line
+                     (delete-region (point-min) (point))
+                     nil))
+            (when (and eof (zerop (buffer-size)))
+              (kill-buffer buffer)
+              (setq reach-to-end t))
+            line)))))))
 
-(defun pcsv--file-reader (file coding block-size)
+(defun pcsv--file-reader (buffer file coding block-size)
   (let ((pos 0)
-        (size (or block-size large-file-warning-threshold))
+        (size (or block-size
+                  ;; suppress reading size
+                  (/ large-file-warning-threshold 10)))
         (start (point-min-marker))
         eof codings cs)
     (set-buffer-multibyte t)
     (lambda ()
       (unless eof
-        (while
-            (catch 'retry
-              (goto-char (point-max))
-              (let* ((res
-                      (let ((coding-system-for-read 'binary))
-                        (insert-file-contents
-                         file nil pos (+ pos size))))
-                     (attr (file-attributes file))
-                     (size (nth 7 attr)))
-                ;; res has inserted bytes
-                (setq pos (+ pos (cadr res)))
-                (setq eof (>= pos size))
-                (save-excursion
-                  (goto-char (point-max))
-                  (unless eof
-                    (forward-line 0)
-                    (when (bobp)
-                      (throw 'retry t)))
-                  (setq cs (or coding
-                               ;;TODO reconsider
-                               (with-coding-priority codings
-                                 (detect-coding-region start (point) t))))
-                  (unless (memq cs codings)
-                    (setq codings (cons cs codings)))
-                  ;; proceeded line may have broken char.
-                  ;; so decode coding just all char in a line was proceeded.
-                  (decode-coding-region start (point) cs)
-                  (setq start (point-marker))))
-              nil)))
+        (with-current-buffer buffer
+          (while
+              (catch 'retry
+                (goto-char (point-max))
+                (let* ((res
+                        (let ((coding-system-for-read 'binary))
+                          (insert-file-contents
+                           file nil pos (+ pos size))))
+                       (attr (file-attributes file))
+                       (size (nth 7 attr)))
+                  ;; res has inserted bytes (not chars)
+                  (setq pos (+ pos (cadr res)))
+                  (setq eof (>= pos size))
+                  (save-excursion
+                    (goto-char (point-max))
+                    (unless eof
+                      (forward-line 0)
+                      (when (bobp)
+                        (throw 'retry t)))
+                    (setq cs (or coding
+                                 ;;TODO reconsider
+                                 (with-coding-priority codings
+                                   (detect-coding-region start (point) t))))
+                    (unless (memq cs codings)
+                      (setq codings (cons cs codings)))
+                    ;; proceeded line may have broken char.
+                    ;; so decode coding just all char in a line was proceeded.
+                    (decode-coding-region start (point) cs)
+                    (setq start (point-marker))))
+                nil))))
       eof)))
 
 (defun pcsv-map (function)
