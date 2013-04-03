@@ -38,9 +38,9 @@
 ;; Use `pcsv-parse-buffer', `pcsv-parse-file', `pcsv-parse-region' functions
 ;; to parse csv.
 
-;; To handle huge csv file, use the lazy parser `pcsv-file-parser'.
+;; To handle huge csv file, use the lazy parser `pcsv-file-parser'. (After GNU Emacs 24)
 
-;; To handle csv buffer like cursor, use the `pcsv-parser'.
+;; To handle csv buffer like cursor, use the `pcsv-parser'. (After GNU Emacs 24)
 
 ;;; Code:
 
