@@ -1,6 +1,5 @@
-## Development:
+# pcsv.el
 
-M-x ert (tag pcsv)
-
-M-x marmalade-upload-buffer
+pcsv provides parser of csv based on rfc4180
+http://www.rfc-editor.org/rfc/rfc4180.txt
 
