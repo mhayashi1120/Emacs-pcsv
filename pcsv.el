@@ -4,7 +4,7 @@
 ;; Keywords: data
 ;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version: 1.3.1
+;; Version: 1.3.2
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -38,9 +38,9 @@
 ;; Use `pcsv-parse-buffer', `pcsv-parse-file', `pcsv-parse-region' functions
 ;; to parse csv.
 
-;; To handle huge csv file, use the lazy parser `pcsv-file-parser'. (After GNU Emacs 24)
+;; To handle huge csv file, use the lazy parser `pcsv-file-parser'.
 
-;; To handle csv buffer like cursor, use the `pcsv-parser'. (After GNU Emacs 24)
+;; To handle csv buffer like cursor, use the `pcsv-parser'.
 
 ;;; Code:
 
@@ -48,14 +48,14 @@
 
 ;;;###autoload
 (defun pcsv-parse-buffer (&optional buffer)
-  "Parse a current buffer as a csv.
-BUFFER non-nil means parse buffer instead of current buffer."
+  "Parse a BUFFER as a csv. BUFFER defaults to `current-buffer'."
   (with-current-buffer (or buffer (current-buffer))
     (pcsv-parse-region (point-min) (point-max))))
 
 ;;;###autoload
 (defun pcsv-parse-file (file &optional coding-system)
-  "Parse FILE as a csv file."
+  "Parse FILE as a csv file with CODING-SYSTEM.
+To handle huge file, please try `pcsv-file-parser' function."
   (with-temp-buffer
     (let ((coding-system-for-read coding-system))
       (insert-file-contents file))
@@ -155,6 +155,8 @@ Example:
               (setq reach-to-end t))
             line)))))))
 
+;; This reader read characters from FILE at least one line basis BLOCK-SIZE
+;; End of line may contain unibyte text.
 (defun pcsv--file-reader (buffer file coding block-size)
   (let ((pos 0)
         (size (or block-size
@@ -169,15 +171,19 @@ Example:
           (while
               (catch 'retry
                 (goto-char (point-max))
-                (let* ((res
-                        (let ((coding-system-for-read 'binary))
-                          (insert-file-contents
-                           file nil pos (+ pos size))))
-                       (attr (file-attributes file))
-                       (size (nth 7 attr)))
+                (let* ((len
+                        ;; insert as binary block reading may destroy coding
+                        (let* ((coding-system-for-read 'binary)
+                               (res (insert-file-contents
+                                     file nil pos (+ pos size))))
+                          (nth 1 res)))
+                       (size
+                        (let ((attr (file-attributes file)))
+                          (nth 7 attr))))
                   ;; res has inserted bytes (not chars)
-                  (setq pos (+ pos (cadr res)))
+                  (setq pos (+ pos len))
                   (setq eof (>= pos size))
+                  ;; check inserted text have at least one line.
                   (save-excursion
                     (goto-char (point-max))
                     (unless eof
@@ -185,7 +191,6 @@ Example:
                       (when (bobp)
                         (throw 'retry t)))
                     (setq cs (or coding
-                                 ;;TODO reconsider
                                  (with-coding-priority codings
                                    (detect-coding-region start (point) t))))
                     (unless (memq cs codings)
