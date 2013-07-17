@@ -4,7 +4,7 @@
 ;; Keywords: data
 ;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version: 1.3.2
+;; Version: 1.3.3
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -213,7 +213,6 @@ Example:
       (nreverse lis))))
 
 (defvar pcsv--eobp)
-(defvar pcsv--quoting-read)
 
 (defun pcsv-peek ()
   (char-after))
@@ -225,45 +224,58 @@ Example:
       (setq lis (cons v lis)))
     (nreverse lis)))
 
-(defun pcsv-read-char ()
+(defun pcsv-read-raw ()
   (cond
    ((eobp)
-    (when pcsv--quoting-read
-      ;; must be ended before call this function.
-      (signal 'invalid-read-syntax
-              (list "Unexpected end of buffer")))
     nil)
    (t
-    (forward-char)
-    (let* ((c (char-before)))
-      (cond
-       ((null c))
-       ((and pcsv--quoting-read (eq c ?\"))
-        (let ((c2 (pcsv-peek)))
-          (cond
-           ((eq ?\" c2)
-            (forward-char)
-            (setq c ?\"))
-           ((memq c2 `(,pcsv-separator ?\n))
-            (forward-char)
-            (setq c nil))
-           ((null c2)
-            ;; end of buffer
-            (setq c nil))
-           (t
-            (signal 'invalid-read-syntax
-                    (list (format "Expected `\"' but got `%c'" c2)))))))
-       ((null pcsv--quoting-read)
+    (let ((lis '())
+          c)
+      (catch 'done
+        (while (not (eobp))
+          (setq c (pcsv-peek))
+          (forward-char)
+          (when (memq c `(,pcsv-separator ?\n))
+            (throw 'done t))
+          (setq lis (cons c lis))))
+      (concat (nreverse lis))))))
+
+(defun pcsv-read-quoting ()
+  (cond
+   ((eobp)
+    ;; must be ended before call this function.
+    (signal 'invalid-read-syntax
+            (list "Unexpected end of buffer")))
+   (t
+    (cond
+     ((eq (pcsv-peek) ?\")
+      (forward-char)
+      (let ((c2 (pcsv-peek)))
         (cond
-         ((eq c pcsv-separator)
-          (setq c nil))
-         ((eq c ?\n)
-          (setq c nil)))))
-      c))))
+         ((eq ?\" c2)
+          ;; quoted double quote
+          (forward-char)
+          (list ?\"))
+         ((memq c2 `(,pcsv-separator ?\n))
+          ;; next char terminate the value
+          (forward-char)
+          nil)
+         ((null c2)
+          ;; end of buffer
+          nil)
+         (t
+          (signal 'invalid-read-syntax
+                  (list (format "Expected `\"' but got `%c'" c2)))))))
+     ((looking-at "[^\"]\\{1,1024\\}")
+      ;; must match
+      (let ((s (match-string 0)))
+        (goto-char (match-end 0))
+        s))
+     (t
+      (error "Assert must match non quoting regexp"))))))
 
 (defun pcsv-read ()
-  (let ((c (pcsv-peek))
-        lis)
+  (let ((c (pcsv-peek)))
     (cond
      ((null c)
       ;; handling last line has no newline
@@ -273,14 +285,14 @@ Example:
         (setq pcsv--eobp t)
         "")
        (t nil)))
+     ((eq c ?\")
+      (forward-char)
+      (let (cs lis)
+        (while (setq cs (pcsv-read-quoting))
+          (setq lis (cons cs lis)))
+        (apply 'concat (nreverse lis))))
      (t
-      (let ((pcsv--quoting-read
-             (when (eq c ?\")
-               (forward-char)
-               t)))
-        (while (setq c (pcsv-read-char))
-          (setq lis (cons c lis))))
-      (concat (nreverse lis))))))
+      (pcsv-read-raw)))))
 
 (provide 'pcsv)
 

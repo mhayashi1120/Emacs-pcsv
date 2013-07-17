@@ -27,7 +27,10 @@
   "Check handling huge input."
   :tags '(pcsv)
   (should (pcsv-test-get (make-string (ash 1 10) ?a)))
-  (should (pcsv-test-get (make-string (ash 1 20) ?a))))
+  (should (pcsv-test-get (make-string (ash 1 20) ?a)))
+  (should (pcsv-test-get (concat "\"" (make-string (ash 1 20) ?a) "\"")))
+  (should (equal (make-string (ash 1 14) ?\")
+                 (caar (pcsv-test-get (concat "\"" (make-string (ash 1 15) ?\") "\""))))))
 
 (ert-deftest pcsv-lazy-parser-test1 ()
   "Check handling lazy parser."
