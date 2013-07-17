@@ -214,9 +214,6 @@ Example:
 
 (defvar pcsv--eobp)
 
-(defun pcsv-peek ()
-  (char-after))
-
 (defun pcsv-read-line ()
   (let (pcsv--eobp v lis)
     (while (and (or (null v) (not (bolp)))
@@ -233,7 +230,7 @@ Example:
           c)
       (catch 'done
         (while (not (eobp))
-          (setq c (pcsv-peek))
+          (setq c (char-after))
           (forward-char)
           (when (memq c `(,pcsv-separator ?\n))
             (throw 'done t))
@@ -248,9 +245,9 @@ Example:
             (list "Unexpected end of buffer")))
    (t
     (cond
-     ((eq (pcsv-peek) ?\")
+     ((eq (char-after) ?\")
       (forward-char)
-      (let ((c2 (pcsv-peek)))
+      (let ((c2 (char-after)))
         (cond
          ((eq ?\" c2)
           ;; quoted double quote
@@ -275,7 +272,7 @@ Example:
       (error "Assert must match non quoting regexp"))))))
 
 (defun pcsv-read ()
-  (let ((c (pcsv-peek)))
+  (let ((c (char-after)))
     (cond
      ((null c)
       ;; handling last line has no newline
