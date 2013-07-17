@@ -4,7 +4,7 @@
 ;; Keywords: data
 ;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version: 1.3.3
+;; Version: 1.4.0
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -46,6 +46,150 @@
 
 (defvar pcsv-separator ?,)
 
+(defvar pcsv--eobp)
+
+(defun pcsv-read-raw ()
+  (cond
+   ((eobp)
+    nil)
+   (t
+    (let ((lis '())
+          c)
+      (catch 'done
+        (while (not (eobp))
+          (setq c (char-after))
+          (forward-char)
+          (when (memq c `(,pcsv-separator ?\n))
+            (throw 'done t))
+          (setq lis (cons c lis))))
+      (concat (nreverse lis))))))
+
+(defun pcsv-read-quoting ()
+  (cond
+   ((eobp)
+    ;; must be ended before call this function.
+    (signal 'invalid-read-syntax
+            (list "Unexpected end of buffer")))
+   (t
+    (cond
+     ((eq (char-after) ?\")
+      (forward-char)
+      (let ((c2 (char-after)))
+        (cond
+         ((eq ?\" c2)
+          ;; quoted double quote
+          (forward-char)
+          (list ?\"))
+         ((memq c2 `(,pcsv-separator ?\n))
+          ;; next char terminate the value
+          (forward-char)
+          nil)
+         ((null c2)
+          ;; end of buffer
+          nil)
+         (t
+          (signal 'invalid-read-syntax
+                  (list (format "Expected `\"' but got `%c'" c2)))))))
+     ((looking-at "[^\"]\\{1,1024\\}")
+      ;; must match
+      (let ((s (match-string 0)))
+        (goto-char (match-end 0))
+        s))
+     (t
+      (error "Assert must match non quoting regexp"))))))
+
+(defun pcsv-read ()
+  (let ((c (char-after)))
+    (cond
+     ((null c)
+      ;; handling last line has no newline
+      (cond
+       (pcsv--eobp nil)
+       ((eq (char-before) pcsv-separator)
+        (setq pcsv--eobp t)
+        "")
+       (t nil)))
+     ((eq c ?\")
+      (forward-char)
+      (let (cs lis)
+        (while (setq cs (pcsv-read-quoting))
+          (setq lis (cons cs lis)))
+        (apply 'concat (nreverse lis))))
+     (t
+      (pcsv-read-raw)))))
+
+(defun pcsv-read-line ()
+  (let (pcsv--eobp v lis)
+    (while (and (or (null v) (not (bolp)))
+                (setq v (pcsv-read)))
+      (setq lis (cons v lis)))
+    (nreverse lis)))
+
+(defun pcsv-map (function)
+  (save-excursion
+    (let (lis)
+      (goto-char (point-min))
+      (while (not (eobp))
+        (setq lis (cons
+                   (funcall function (pcsv-read-line))
+                   lis)))
+      (nreverse lis))))
+
+;; This reader read characters from FILE at least one line basis BLOCK-SIZE
+;; End of line may contain unibyte text.
+(defun pcsv--file-reader (buffer file coding block-size)
+  (let ((pos 0)
+        (size (or block-size
+                  ;; suppress reading size
+                  (/ large-file-warning-threshold 10)))
+        (start (point-min-marker))
+        eof codings cs)
+    (set-buffer-multibyte t)
+    (lambda ()
+      (unless eof
+        (with-current-buffer buffer
+          (while
+              (catch 'retry
+                (goto-char (point-max))
+                (let* ((len
+                        ;; insert as binary block reading may destroy coding
+                        (let* ((coding-system-for-read 'binary)
+                               (res (insert-file-contents
+                                     file nil pos (+ pos size))))
+                          (nth 1 res)))
+                       (size
+                        (let ((attr (file-attributes file)))
+                          (nth 7 attr))))
+                  ;; res has inserted bytes (not chars)
+                  (setq pos (+ pos len))
+                  (setq eof (>= pos size))
+                  ;; check inserted text have at least one line.
+                  (save-excursion
+                    (goto-char (point-max))
+                    (unless eof
+                      (forward-line 0)
+                      (when (bobp)
+                        (throw 'retry t)))
+                    (setq cs (or coding
+                                 (with-coding-priority codings
+                                   (detect-coding-region start (point) t))))
+                    (unless (memq cs codings)
+                      (setq codings (cons cs codings)))
+                    ;; proceeded line may have broken char.
+                    ;; so decode coding just all char in a line was proceeded.
+                    (decode-coding-region start (point) cs)
+                    (setq start (point-marker))))
+                nil))))
+      eof)))
+
+;;;###autoload
+(defun pcsv-parse-region (start end)
+  "Parse region as a csv."
+  (save-excursion
+    (save-restriction
+      (narrow-to-region start end)
+      (pcsv-map 'identity))))
+
 ;;;###autoload
 (defun pcsv-parse-buffer (&optional buffer)
   "Parse a BUFFER as a csv. BUFFER defaults to `current-buffer'."
@@ -60,14 +204,6 @@ To handle huge file, please try `pcsv-file-parser' function."
     (let ((coding-system-for-read coding-system))
       (insert-file-contents file))
     (pcsv-parse-region (point-min) (point-max))))
-
-;;;###autoload
-(defun pcsv-parse-region (start end)
-  "Parse region as a csv."
-  (save-excursion
-    (save-restriction
-      (narrow-to-region start end)
-      (pcsv-map 'identity))))
 
 ;;;###autoload
 (defun pcsv-parser (&optional buffer)
@@ -154,142 +290,6 @@ Example:
               (kill-buffer buffer)
               (setq reach-to-end t))
             line)))))))
-
-;; This reader read characters from FILE at least one line basis BLOCK-SIZE
-;; End of line may contain unibyte text.
-(defun pcsv--file-reader (buffer file coding block-size)
-  (let ((pos 0)
-        (size (or block-size
-                  ;; suppress reading size
-                  (/ large-file-warning-threshold 10)))
-        (start (point-min-marker))
-        eof codings cs)
-    (set-buffer-multibyte t)
-    (lambda ()
-      (unless eof
-        (with-current-buffer buffer
-          (while
-              (catch 'retry
-                (goto-char (point-max))
-                (let* ((len
-                        ;; insert as binary block reading may destroy coding
-                        (let* ((coding-system-for-read 'binary)
-                               (res (insert-file-contents
-                                     file nil pos (+ pos size))))
-                          (nth 1 res)))
-                       (size
-                        (let ((attr (file-attributes file)))
-                          (nth 7 attr))))
-                  ;; res has inserted bytes (not chars)
-                  (setq pos (+ pos len))
-                  (setq eof (>= pos size))
-                  ;; check inserted text have at least one line.
-                  (save-excursion
-                    (goto-char (point-max))
-                    (unless eof
-                      (forward-line 0)
-                      (when (bobp)
-                        (throw 'retry t)))
-                    (setq cs (or coding
-                                 (with-coding-priority codings
-                                   (detect-coding-region start (point) t))))
-                    (unless (memq cs codings)
-                      (setq codings (cons cs codings)))
-                    ;; proceeded line may have broken char.
-                    ;; so decode coding just all char in a line was proceeded.
-                    (decode-coding-region start (point) cs)
-                    (setq start (point-marker))))
-                nil))))
-      eof)))
-
-(defun pcsv-map (function)
-  (save-excursion
-    (let (lis)
-      (goto-char (point-min))
-      (while (not (eobp))
-        (setq lis (cons
-                   (funcall function (pcsv-read-line))
-                   lis)))
-      (nreverse lis))))
-
-(defvar pcsv--eobp)
-
-(defun pcsv-read-line ()
-  (let (pcsv--eobp v lis)
-    (while (and (or (null v) (not (bolp)))
-                (setq v (pcsv-read)))
-      (setq lis (cons v lis)))
-    (nreverse lis)))
-
-(defun pcsv-read-raw ()
-  (cond
-   ((eobp)
-    nil)
-   (t
-    (let ((lis '())
-          c)
-      (catch 'done
-        (while (not (eobp))
-          (setq c (char-after))
-          (forward-char)
-          (when (memq c `(,pcsv-separator ?\n))
-            (throw 'done t))
-          (setq lis (cons c lis))))
-      (concat (nreverse lis))))))
-
-(defun pcsv-read-quoting ()
-  (cond
-   ((eobp)
-    ;; must be ended before call this function.
-    (signal 'invalid-read-syntax
-            (list "Unexpected end of buffer")))
-   (t
-    (cond
-     ((eq (char-after) ?\")
-      (forward-char)
-      (let ((c2 (char-after)))
-        (cond
-         ((eq ?\" c2)
-          ;; quoted double quote
-          (forward-char)
-          (list ?\"))
-         ((memq c2 `(,pcsv-separator ?\n))
-          ;; next char terminate the value
-          (forward-char)
-          nil)
-         ((null c2)
-          ;; end of buffer
-          nil)
-         (t
-          (signal 'invalid-read-syntax
-                  (list (format "Expected `\"' but got `%c'" c2)))))))
-     ((looking-at "[^\"]\\{1,1024\\}")
-      ;; must match
-      (let ((s (match-string 0)))
-        (goto-char (match-end 0))
-        s))
-     (t
-      (error "Assert must match non quoting regexp"))))))
-
-(defun pcsv-read ()
-  (let ((c (char-after)))
-    (cond
-     ((null c)
-      ;; handling last line has no newline
-      (cond
-       (pcsv--eobp nil)
-       ((eq (char-before) pcsv-separator)
-        (setq pcsv--eobp t)
-        "")
-       (t nil)))
-     ((eq c ?\")
-      (forward-char)
-      (let (cs lis)
-        (while (setq cs (pcsv-read-quoting))
-          (setq lis (cons cs lis)))
-        (apply 'concat (nreverse lis))))
-     (t
-      (pcsv-read-raw)))))
 
 (provide 'pcsv)
 
