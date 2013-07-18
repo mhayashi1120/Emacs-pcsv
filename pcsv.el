@@ -4,7 +4,7 @@
 ;; Keywords: data
 ;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version: 1.4.0
+;; Version: 1.3.3
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -48,7 +48,7 @@
 
 (defvar pcsv--eobp)
 
-(defun pcsv-read-raw ()
+(defun pcsv-read-literal ()
   (cond
    ((eobp)
     nil)
@@ -65,38 +65,43 @@
       (concat (nreverse lis))))))
 
 (defun pcsv-read-quoting ()
-  (cond
-   ((eobp)
-    ;; must be ended before call this function.
-    (signal 'invalid-read-syntax
-            (list "Unexpected end of buffer")))
-   (t
-    (cond
-     ((eq (char-after) ?\")
-      (forward-char)
-      (let ((c2 (char-after)))
+  ;; skip first quoting char
+  (forward-char)
+  (let ((lis '()))
+    (catch 'return
+      (while t
         (cond
-         ((eq ?\" c2)
-          ;; quoted double quote
-          (forward-char)
-          (list ?\"))
-         ((memq c2 `(,pcsv-separator ?\n))
-          ;; next char terminate the value
-          (forward-char)
-          nil)
-         ((null c2)
-          ;; end of buffer
-          nil)
-         (t
+         ((eobp)
+          ;; must be ended before call this function.
           (signal 'invalid-read-syntax
-                  (list (format "Expected `\"' but got `%c'" c2)))))))
-     ((looking-at "[^\"]\\{1,1024\\}")
-      ;; must match
-      (let ((s (match-string 0)))
-        (goto-char (match-end 0))
-        s))
-     (t
-      (error "Assert must match non quoting regexp"))))))
+                  (list "Unexpected end of buffer")))
+         (t
+          (cond
+           ((eq (char-after) ?\")
+            (forward-char)
+            (let ((c2 (char-after)))
+              (cond
+               ((eq ?\" c2)
+                ;; quoted double quote
+                (forward-char)
+                (setq lis (cons "\"" lis)))
+               ((memq c2 `(,pcsv-separator ?\n))
+                ;; next char terminate the value
+                (forward-char)
+                (throw 'return (apply 'concat (nreverse lis))))
+               ((null c2)
+                ;; end of buffer
+                (throw 'return (apply 'concat (nreverse lis))))
+               (t
+                (signal 'invalid-read-syntax
+                        (list (format "Expected `\"' but got `%c'" c2)))))))
+           ((looking-at "[^\"]\\{1,1024\\}")
+            ;; must match
+            (let ((s (match-string 0)))
+              (goto-char (match-end 0))
+              (setq lis (cons s lis))))
+           (t
+            (error "Assert must match non quoting regexp")))))))))
 
 (defun pcsv-read ()
   (let ((c (char-after)))
@@ -110,13 +115,9 @@
         "")
        (t nil)))
      ((eq c ?\")
-      (forward-char)
-      (let (cs lis)
-        (while (setq cs (pcsv-read-quoting))
-          (setq lis (cons cs lis)))
-        (apply 'concat (nreverse lis))))
+      (pcsv-read-quoting))
      (t
-      (pcsv-read-raw)))))
+      (pcsv-read-literal)))))
 
 (defun pcsv-read-line ()
   (let (pcsv--eobp v lis)
