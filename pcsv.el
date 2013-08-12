@@ -2,7 +2,7 @@
 
 ;; Author: Masahiro Hayashi <mhayashi1120@gmail.com>
 ;; Keywords: data
-;; URL: http://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
+;; URL: https://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
 ;; Version: 1.3.3
 
@@ -95,7 +95,7 @@
                (t
                 (signal 'invalid-read-syntax
                         (list (format "Expected `\"' but got `%c'" c2)))))))
-           ((looking-at "[^\"]\\{1,1024\\}")
+           ((looking-at "[^\"]\\{1,1024\\}") ; restrict capture to 1024 bytes
             ;; must match
             (let ((s (match-string 0)))
               (goto-char (match-end 0))
@@ -103,6 +103,23 @@
            (t
             (error "Assert must match non quoting regexp")))))))))
 
+;; some of read strategy was considered
+;; 1. read by regexp
+;; 2. read just a char in a loop
+;; 3. hybrid of 1. and 2.
+
+;; first version of pcsv.el was 1. 
+;;   but this version call too many `replace-regexp-in-string' to replace `"' (double quote).
+;; next pcsv.el specificate was 2.
+;;   this version slow down when parsing huge csv.
+;; current version of this package is 3.
+;;   if value doesn't start with `"' (double quote), simply match regexp
+;;   and return captured text.
+;;   other case capture text until next double quote. this double quote must be
+;;   one of following:
+;;   * end of value
+;;   * quote double quote
+;;   until end of value concat captured text and quoted double quote.
 (defun pcsv-read ()
   (let ((c (char-after)))
     (cond
