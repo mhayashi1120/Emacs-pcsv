@@ -4,7 +4,7 @@
 ;; Keywords: data
 ;; URL: https://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version: 1.3.3
+;; Version: 1.3.4
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -267,7 +267,7 @@ Example:
   (unless (file-exists-p file)
     (error "File is not exists %s" file))
   (when (and block-size
-             (not (plusp block-size)))
+             (<= block-size 0))
     (error "Not a valid block size %s" block-size))
   (let* ((bufname (format " *pcsv parse %s* " file))
          (buffer (generate-new-buffer bufname))
