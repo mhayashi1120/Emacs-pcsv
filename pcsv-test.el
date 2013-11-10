@@ -55,22 +55,23 @@
 (ert-deftest pcsv-lazy-file-parser-test ()
   "Check handling lazy file parser."
   :tags '(pcsv)
-  (let ((file (make-temp-file "pcsv-")))
-    (let ((coding-system-for-write 'euc-jp))
-      (write-region "あ,い,う\nA,B,C\n" nil file))
-    (let ((parser (pcsv-file-parser file 'euc-jp 1)))
-      (should (equal (funcall parser) '("あ" "い" "う")))
-      (should (equal (funcall parser) '("A" "B" "C")))
-      (should-not (funcall parser)))
-    ;; check broken char in a file read.
-    (let ((parser (pcsv-file-parser file 'euc-jp 1)))
-      (should (equal (funcall parser) '("あ" "い" "う")))
-      (funcall parser t)
-      ;; raise no error
-      (should-not (funcall parser)))
-    ;; check detect coding system (euc-jp)
-    (let ((parser (pcsv-file-parser file nil 1)))
-      (should (equal (funcall parser) '("あ" "い" "う")))
-      (funcall parser t)
-      ;; raise no error
-      (should-not (funcall parser)))))
+  (dolist (cs '(euc-jp utf-8 cp932 nil))
+    (let ((file (make-temp-file "pcsv-")))
+      (let ((coding-system-for-write cs))
+        (write-region "あ,い,う\nA,B,C\n" cs file))
+      (let ((parser (pcsv-file-parser file nil 1)))
+        (should (equal (funcall parser) '("あ" "い" "う")))
+        (should (equal (funcall parser) '("A" "B" "C")))
+        (should-not (funcall parser)))
+      ;; check broken char in a file read.
+      (let ((parser (pcsv-file-parser file cs 1)))
+        (should (equal (funcall parser) '("あ" "い" "う")))
+        (funcall parser t)
+        ;; raise no error
+        (should-not (funcall parser)))
+      ;; check detect coding system any
+      (let ((parser (pcsv-file-parser file nil 1)))
+        (should (equal (funcall parser) '("あ" "い" "う")))
+        (funcall parser t)
+        ;; raise no error
+        (should-not (funcall parser))))))

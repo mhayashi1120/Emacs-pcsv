@@ -4,7 +4,7 @@
 ;; Keywords: data
 ;; URL: https://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version: 1.3.4
+;; Version: 1.3.5
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -162,7 +162,10 @@
                   (/ large-file-warning-threshold 10)))
         (start (point-min-marker))
         eof codings cs)
-    (set-buffer-multibyte t)
+    (with-current-buffer buffer
+      ;; accept multibyte to `decode-coding-region'
+      ;; although, `insert-file-contents' insert unibyte text.
+      (set-buffer-multibyte t))
     (lambda ()
       (unless eof
         (with-current-buffer buffer
@@ -170,7 +173,8 @@
               (catch 'retry
                 (goto-char (point-max))
                 (let* ((len
-                        ;; insert as binary block reading may destroy coding
+                        ;; Insert as a binary block.
+                        ;; The reading block may destroy coding
                         (let* ((coding-system-for-read 'binary)
                                (res (insert-file-contents
                                      file nil pos (+ pos size))))
