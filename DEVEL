@@ -1,5 +1,5 @@
 Do not forget
 
-M-x ert (tag pcsv)
+make check
 
 M-x marmalade-upload-buffer
