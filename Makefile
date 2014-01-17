@@ -1,9 +1,10 @@
-check: compile
-	emacs -q -batch -l pcsv.el -l pcsv-test.el \
-		-eval "(ert-run-tests-batch-and-exit '(tag pcsv))"
-	emacs -q -batch -l pcsv.elc -l pcsv-test.el \
-		-eval "(ert-run-tests-batch-and-exit '(tag pcsv))"
+EMACS = emacs
 
+check: compile
+	$(EMACS) -q -batch -l pcsv.el -l pcsv-test.el \
+		-f ert-run-tests-batch-and-exit
+	$(EMACS) -q -batch -l pcsv.elc -l pcsv-test.el \
+		-f ert-run-tests-batch-and-exit
 
 compile:
-	emacs -q -batch -eval "(byte-compile-file \"pcsv.el\")"; \
+	$(EMACS) -q -batch -f batch-byte-compile pcsv.el
