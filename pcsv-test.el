@@ -63,13 +63,13 @@
       (let ((coding-system-for-write cs))
         (write-region "あ,い,う\nA,B,C\n" cs file))
       (princ (format "1 %s\n" cs))
-      (let ((parser (pcsv-file-parser file nil 1)))
+      ;; check broken char in a file read.
+      (let ((parser (pcsv-file-parser file cs 1)))
         (should (equal (funcall parser) '("あ" "い" "う")))
         (should (equal (funcall parser) '("A" "B" "C")))
         (should-not (funcall parser)))
       (princ (format "2 %s\n" cs))
-      ;; check broken char in a file read.
-      (let ((parser (pcsv-file-parser file cs 1)))
+      (let ((parser (pcsv-file-parser file cs)))
         (should (equal (funcall parser) '("あ" "い" "う")))
         (funcall parser t)
         ;; raise no error
@@ -77,7 +77,7 @@
       (princ (format "3 %s\n" cs))
       ;; check detect coding system any
       (condition-case err
-          (let ((parser (pcsv-file-parser file nil 1)))
+          (let ((parser (pcsv-file-parser file nil)))
             (should (equal (funcall parser) '("あ" "い" "う")))
             (funcall parser t)
             ;; raise no error
