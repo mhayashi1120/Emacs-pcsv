@@ -4,7 +4,8 @@
 ;; Keywords: data
 ;; URL: https://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version: 1.3.5
+;; Version: 1.3.6
+;; Package-Requires: ()
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
@@ -95,8 +96,9 @@
                (t
                 (signal 'invalid-read-syntax
                         (list (format "Expected `\"' but got `%c'" c2)))))))
-           ((looking-at "[^\"]\\{1,1024\\}") ; restrict capture to 1024 bytes
-            ;; must match
+           ((looking-at "[^\"]\\{1,1024\\}")
+            ;; must match here
+            ;; restrict capture to 1024 chars
             (let ((s (match-string 0)))
               (goto-char (match-end 0))
               (setq lis (cons s lis))))
@@ -110,13 +112,13 @@
 
 ;; first version of pcsv.el was 1. 
 ;;   but this version call too many `replace-regexp-in-string' to replace `"' (double quote).
-;; next pcsv.el specificate was 2.
+;; next pcsv.el was 2.
 ;;   this version slow down when parsing huge csv.
 ;; current version of this package is 3.
 ;;   if value doesn't start with `"' (double quote), simply match regexp
 ;;   and return captured text.
 ;;   other case capture text until next double quote. this double quote must be
-;;   one of following:
+;;   one of the followings:
 ;;   * end of value
 ;;   * quote double quote
 ;;   until end of value concat captured text and quoted double quote.
@@ -241,8 +243,9 @@ Example:
 "
   (unless (>= emacs-major-version 24)
     (error "lexical binding is not supported"))
-  (let ((buffer (or buffer (current-buffer)))
-        (pos (point-min-marker)))
+  (let* ((buffer (or buffer (current-buffer)))
+         (pos (with-current-buffer buffer
+                (point-min-marker))))
     (lambda ()
       (with-current-buffer buffer
         (save-excursion
@@ -253,7 +256,8 @@ Example:
 ;;;###autoload
 (defun pcsv-file-parser (file &optional coding-system block-size)
   "Create a csv parser to read huge FILE.
-This csv parser accept a optional arg which non-nil means terminate the parser.
+This csv parser accept a optional arg.
+ You must call this parser with optional non-nil arg to terminate the parser.
 
 Optional arg BLOCK-SIZE indicate bytes to read FILE each time.
 
@@ -277,12 +281,15 @@ Example:
          (buffer (generate-new-buffer bufname))
          (block-reader
           (pcsv--file-reader buffer file coding-system block-size))
-         eof reach-to-end)
+         terminated eof reach-to-end)
     (lambda (&optional close)
       (cond
        (close
-        (kill-buffer buffer))
+        (kill-buffer buffer)
+        (setq terminated t))
        ((not (buffer-live-p buffer))
+        (unless (or terminated reach-to-end)
+          (error "Buffer was closed unexpectedly"))
         nil)
        (reach-to-end
         (kill-buffer buffer)
