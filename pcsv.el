@@ -4,7 +4,7 @@
 ;; Keywords: data
 ;; URL: https://github.com/mhayashi1120/Emacs-pcsv/raw/master/pcsv.el
 ;; Emacs: GNU Emacs 21 or later
-;; Version: 1.3.6
+;; Version: 1.3.7
 ;; Package-Requires: ()
 
 ;; This program is free software; you can redistribute it and/or
