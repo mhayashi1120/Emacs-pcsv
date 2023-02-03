@@ -1,10 +1,24 @@
-EMACS = emacs
+-include env.mk
+
+EMACS ?= emacs
+BATCH = $(EMACS) -Q -batch
+
+EL := pcsv.el
+ELC := $(EL:%.el=%.elc)
+
+LOAD_EL := $(EL:%=-l %)
+LOAD_ELC := $(ELC:%=-l %)
+
+GENERATED = *.elc
 
 check: compile
-	$(EMACS) -q -batch -l pcsv.el -l pcsv-test.el \
+	$(BATCH) $(LOAD_EL) -l pcsv-test.el \
 		-f ert-run-tests-batch-and-exit
-	$(EMACS) -q -batch -l pcsv.elc -l pcsv-test.el \
+	$(BATCH) $(LOAD_ELC) -l pcsv-test.el \
 		-f ert-run-tests-batch-and-exit
 
 compile:
-	$(EMACS) -q -batch -f batch-byte-compile pcsv.el
+	$(BATCH) -f batch-byte-compile $(EL)
+
+clean:
+	rm -f $(GENERATED)
