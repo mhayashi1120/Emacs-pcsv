@@ -3,9 +3,9 @@
 ;; Author: Masahiro Hayashi <mhayashi1120@gmail.com>
 ;; Keywords: data
 ;; URL: https://github.com/mhayashi1120/Emacs-pcsv
-;; Emacs: GNU Emacs 21 or later
+;; Emacs: GNU Emacs 24 or later
 ;; Version: 1.3.8
-;; Package-Requires: ()
+;; Package-Requires: ((emacs "24.1"))
 
 ;; This program is free software; you can redistribute it and/or
 ;; modify it under the terms of the GNU General Public License as
