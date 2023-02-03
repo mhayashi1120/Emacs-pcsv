@@ -4,7 +4,7 @@
 ;; Keywords: data
 ;; URL: https://github.com/mhayashi1120/Emacs-pcsv
 ;; Emacs: GNU Emacs 21 or later
-;; Version: 1.3.7
+;; Version: 1.3.8
 ;; Package-Requires: ()
 
 ;; This program is free software; you can redistribute it and/or
@@ -99,7 +99,7 @@
            ((looking-at "[^\"]\\{1,1024\\}")
             ;; must match here
             ;; restrict capture to 1024 chars
-            (let ((s (match-string 0)))
+            (let ((s (match-string-no-properties 0)))
               (goto-char (match-end 0))
               (setq lis (cons s lis))))
            (t
