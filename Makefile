@@ -20,8 +20,8 @@ ifdef ELPA-DIR
 endif
 
 # NOTE: This come from `pacakge-lint/run-tests.sh`
-LINT_BATCH := $(BATCH) -eval $(call package-installer, package-lint)
-INSTALL_BATCH := $(BATCH) -eval $(call package-installer,)
+LINT_BATCH := $(BATCH) -eval $(call package-installer, package-lint $(NEEDED-PACKAGES))
+INSTALL_BATCH := $(BATCH) -eval $(call package-installer, $(NEEDED-PACKAGES))
 
 EL := pcsv.el
 ELC := $(EL:%.el=%.elc)
@@ -31,7 +31,7 @@ LOAD_ELC := $(ELC:%=-l %)
 
 GENERATED := *.elc
 
-MAINTAINER-GENERATED :=
+MAINTAINER-GENERATED := elpa
 
 ###
 ### General rule
@@ -47,7 +47,7 @@ compile:
 	$(BATCH) -f batch-byte-compile $(EL)
 
 clean:
-	rm -f $(GENERATED)
+	rm -rf $(GENERATED)
 
 ###
 ### Maintainer rule
@@ -59,8 +59,8 @@ lint:
 package: lint check compile
 
 
-maintaner-clean:
-	rm -f (MAINTAINER-GENERATED)
+maintaner-clean: clean
+	rm -rf $(MAINTAINER-GENERATED)
 
 ###
 ### CI/CD rule

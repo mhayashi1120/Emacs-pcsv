@@ -1,2 +1,5 @@
 *.elc
 env.mk
+
+# CI/CD run-test.sh generate this
+elpa
