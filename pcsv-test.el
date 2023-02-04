@@ -8,7 +8,7 @@
     (insert csv-string)
     (pcsv-parse-buffer)))
 
-(ert-deftest pcsv-normal-test ()
+(ert-deftest pcsv-normal-test1 ()
   "Normal csv"
   :tags '(pcsv)
   (should (equal (pcsv-test-get "") '()))
@@ -20,7 +20,7 @@
                   "a,b,c\n\"a,a\",\"bb\n\",\"c,\nc\"\n\"\"\"aaa\"\"\",\",\"\",\"\n") 
                  '(("a" "b" "c") ("a,a" "bb\n" "c,\nc") ("\"aaa\"" ",\",")))))
 
-(ert-deftest pcsv-normal-test ()
+(ert-deftest pcsv-normal-test2 ()
   "Invalid csv"
   :tags '(pcsv)
   (should-error (pcsv-test-get "\"a") :type 'invalid-read-syntax))
