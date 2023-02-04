@@ -29,9 +29,9 @@ ELC := $(EL:%.el=%.elc)
 LOAD_EL := $(EL:%=-l %)
 LOAD_ELC := $(ELC:%=-l %)
 
-GENERATED := *.elc
+BUILD_GENERATED := *.elc
 
-MAINTAINER-GENERATED := elpa
+MAINTAINER_GENERATED := elpa *~
 
 ###
 ### General rule
@@ -49,7 +49,7 @@ compile:
 	$(BATCH) -f batch-byte-compile $(EL)
 
 clean:
-	rm -rf $(GENERATED)
+	rm -rf $(BUILD_GENERATED)
 
 ###
 ### Maintainer rule
@@ -64,7 +64,7 @@ package: lint check compile
 
 
 maintainer-clean:
-	rm -rf $(MAINTAINER-GENERATED)
+	rm -rf $(MAINTAINER_GENERATED)
 
 ###
 ### CI/CD rule
