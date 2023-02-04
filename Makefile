@@ -1,7 +1,27 @@
 -include env.mk
 
+# This come from `package-lint/run-tests.sh`
+define package-installer
+  "(progn \
+   (require 'package) \
+   (push '(\"melpa\" . \"https://melpa.org/packages/\") package-archives) \
+   (package-initialize) \
+   (package-refresh-contents) \
+   (dolist (pkg '($(1))) \
+    (unless (package-installed-p pkg) \
+      (package-install pkg))))"
+endef
+
+
 EMACS ?= emacs
-BATCH = $(EMACS) -Q -batch
+BATCH := $(EMACS) -Q -batch 
+ifdef ELPA-DIR
+	BATCH += -eval "(setq package-user-dir (expand-file-name \"$(ELPA-DIR)\"))"
+endif
+
+# NOTE: This come from `pacakge-lint/run-tests.sh`
+LINT_BATCH := $(BATCH) -eval $(call package-installer, package-lint)
+INSTALL_BATCH := $(BATCH) -eval $(call package-installer,)
 
 EL := pcsv.el
 ELC := $(EL:%.el=%.elc)
@@ -9,16 +29,44 @@ ELC := $(EL:%.el=%.elc)
 LOAD_EL := $(EL:%=-l %)
 LOAD_ELC := $(ELC:%=-l %)
 
-GENERATED = *.elc
+GENERATED := *.elc
+
+MAINTAINER-GENERATED :=
+
+###
+### General rule
+###
+
+all: check
 
 check: compile
-	$(BATCH) $(LOAD_EL) -l pcsv-test.el \
-		-f ert-run-tests-batch-and-exit
-	$(BATCH) $(LOAD_ELC) -l pcsv-test.el \
-		-f ert-run-tests-batch-and-exit
+	$(BATCH) $(LOAD_EL) -l pcsv-test.el -f ert-run-tests-batch-and-exit
+	$(BATCH) $(LOAD_ELC) -l pcsv-test.el -f ert-run-tests-batch-and-exit
 
 compile:
 	$(BATCH) -f batch-byte-compile $(EL)
 
 clean:
 	rm -f $(GENERATED)
+
+###
+### Maintainer rule
+###
+
+lint:
+	$(LINT_BATCH) -f package-lint-batch-and-exit $(EL)
+
+package: lint check compile
+
+
+maintaner-clean:
+	rm -f (MAINTAINER-GENERATED)
+
+###
+### CI/CD rule
+###
+
+ci: prepare-cicd package
+
+prepare-cicd:
+	$(INSTALL_BATCH)
