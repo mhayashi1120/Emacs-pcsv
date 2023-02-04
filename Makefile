@@ -58,7 +58,7 @@ clean:
 .PHONY: lint package maintainer-clean
 
 lint:
-	$(LINT_BATCH) -f package-lint-batch-and-exit $(EL)
+	test -n "$${EMACS_LINT_IGNORE}" || $(LINT_BATCH) -f package-lint-batch-and-exit $(EL)
 
 package: lint check compile
 
