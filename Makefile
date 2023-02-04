@@ -37,6 +37,8 @@ MAINTAINER-GENERATED := elpa
 ### General rule
 ###
 
+.PHONY: all check compile clean
+
 all: check
 
 check: compile
@@ -53,18 +55,22 @@ clean:
 ### Maintainer rule
 ###
 
+.PHONY: lint package maintainer-clean
+
 lint:
 	$(LINT_BATCH) -f package-lint-batch-and-exit $(EL)
 
 package: lint check compile
 
 
-maintaner-clean: clean
+maintainer-clean:
 	rm -rf $(MAINTAINER-GENERATED)
 
 ###
 ### CI/CD rule
 ###
+
+.PHONY: ci prepare-cicd
 
 ci: prepare-cicd package
 
