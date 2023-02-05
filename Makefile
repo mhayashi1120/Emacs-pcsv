@@ -1,4 +1,14 @@
+###
+### Basic
+###
+
 -include env.mk
+
+EMACS ?= emacs
+BATCH := $(EMACS) -Q -batch 
+ifdef ELPA-DIR
+	BATCH += -eval "(setq package-user-dir (expand-file-name \"$(ELPA-DIR)\"))"
+endif
 
 # This come from `package-lint/run-tests.sh`
 define package-installer
@@ -12,26 +22,28 @@ define package-installer
       (package-install pkg))))"
 endef
 
+###
+### Command
+###
 
-EMACS ?= emacs
-BATCH := $(EMACS) -Q -batch 
-ifdef ELPA-DIR
-	BATCH += -eval "(setq package-user-dir (expand-file-name \"$(ELPA-DIR)\"))"
-endif
-
-# NOTE: This come from `pacakge-lint/run-tests.sh`
 LINT_BATCH := $(BATCH) -eval $(call package-installer, package-lint $(NEEDED-PACKAGES))
 INSTALL_BATCH := $(BATCH) -eval $(call package-installer, $(NEEDED-PACKAGES))
+COMPILE_BATCH := $(BATCH)
+ifndef EMACS_LINT_IGNORE
+	COMPILE_BATCH += -eval "(setq byte-compile-error-on-warn t)"
+endif
+
+###
+### Files
+###
 
 EL := pcsv.el
 ELC := $(EL:%.el=%.elc)
+BUILD_GENERATED := *.elc
+MAINTAINER_GENERATED := elpa *~
 
 LOAD_EL := $(EL:%=-l %)
 LOAD_ELC := $(ELC:%=-l %)
-
-BUILD_GENERATED := *.elc
-
-MAINTAINER_GENERATED := elpa *~
 
 ###
 ### General rule
@@ -46,7 +58,7 @@ check: compile
 	$(BATCH) $(LOAD_ELC) -l pcsv-test.el -f ert-run-tests-batch-and-exit
 
 compile:
-	$(BATCH) -f batch-byte-compile $(EL)
+	$(COMPILE_BATCH) -f batch-byte-compile $(EL)
 
 clean:
 	rm -rf $(BUILD_GENERATED)
@@ -63,7 +75,7 @@ lint:
 package: lint check compile
 
 
-maintainer-clean:
+maintainer-clean: clean
 	rm -rf $(MAINTAINER_GENERATED)
 
 ###
