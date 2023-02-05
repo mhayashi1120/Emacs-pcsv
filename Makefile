@@ -26,7 +26,12 @@ endef
 ### Command
 ###
 
-LINT_BATCH := $(BATCH) -eval $(call package-installer, package-lint $(NEEDED-PACKAGES))
+ifdef EMACS_LINT_IGNORE
+	LINT_BATCH := true
+else
+	LINT_BATCH := $(BATCH) -eval $(call package-installer, package-lint $(NEEDED-PACKAGES))
+endif
+
 INSTALL_BATCH := $(BATCH) -eval $(call package-installer, $(NEEDED-PACKAGES))
 COMPILE_BATCH := $(BATCH)
 ifndef EMACS_LINT_IGNORE
@@ -70,7 +75,7 @@ clean:
 .PHONY: lint package maintainer-clean
 
 lint:
-	test -n "$${EMACS_LINT_IGNORE}" || $(LINT_BATCH) -f package-lint-batch-and-exit $(EL)
+	$(LINT_BATCH) -f package-lint-batch-and-exit $(EL)
 
 package: lint check compile
 
