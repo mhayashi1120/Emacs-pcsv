@@ -29,6 +29,11 @@ jobs:
           - 28.1
           - 28.2
           - snapshot
+        exclude:
+          - os: macos-latest
+            emacs_version: 24.1
+          - os: macos-latest
+            emacs_version: 24.2
         include:
           - emacs_version: 24.1
             lint_ignore: 1
