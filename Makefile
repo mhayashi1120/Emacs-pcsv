@@ -1,11 +1,9 @@
-###
-### Basic
-###
-
 -include env.mk
 
 EMACS ?= emacs
-BATCH := $(EMACS) -Q -batch 
+NEEDED-PACKAGES ?=
+
+BATCH := $(EMACS) -Q -batch
 ifdef ELPA-DIR
 	BATCH += -eval "(setq package-user-dir (expand-file-name \"$(ELPA-DIR)\"))"
 endif
@@ -26,17 +24,18 @@ endef
 ### Command
 ###
 
+BUILD_BATCH := $(BATCH) -eval "(require 'package)" -f package-initialize
+ifndef EMACS_LINT_IGNORE
+	BUILD_BATCH += -eval "(setq byte-compile-error-on-warn t)"
+endif
+
 ifdef EMACS_LINT_IGNORE
 	LINT_BATCH := true
 else
-	LINT_BATCH := $(BATCH) -eval $(call package-installer, package-lint $(NEEDED-PACKAGES))
+	LINT_BATCH := $(BATCH) -eval $(call package-installer, package-lint)
 endif
 
-INSTALL_BATCH := $(BATCH) -eval $(call package-installer, $(NEEDED-PACKAGES))
-COMPILE_BATCH := $(BATCH)
-ifndef EMACS_LINT_IGNORE
-	COMPILE_BATCH += -eval "(setq byte-compile-error-on-warn t)"
-endif
+CI_BATCH := $(BATCH) -eval $(call package-installer, package-lint $(NEEDED-PACKAGES))
 
 ###
 ### Files
@@ -59,11 +58,11 @@ LOAD_ELC := $(ELC:%=-l %)
 all: check
 
 check: compile
-	$(BATCH) $(LOAD_EL) -l pcsv-test.el -f ert-run-tests-batch-and-exit
-	$(BATCH) $(LOAD_ELC) -l pcsv-test.el -f ert-run-tests-batch-and-exit
+	$(BUILD_BATCH) $(LOAD_EL) -l pcsv-test.el -f ert-run-tests-batch-and-exit
+	$(BUILD_BATCH) $(LOAD_ELC) -l pcsv-test.el -f ert-run-tests-batch-and-exit
 
 compile:
-	$(COMPILE_BATCH) -f batch-byte-compile $(EL)
+	$(BUILD_BATCH) -f batch-byte-compile $(EL)
 
 clean:
 	rm -rf $(BUILD_GENERATED)
@@ -92,4 +91,4 @@ maintainer-clean: clean
 ci: prepare-cicd package
 
 prepare-cicd:
-	$(INSTALL_BATCH)
+	$(CI_BATCH)
