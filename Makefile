@@ -4,14 +4,19 @@
 
 -include env.mk
 
-EMACS ?= emacs
 NEEDED-PACKAGES ?=
-
-BATCH := $(EMACS) -Q -batch -L .
 
 EL := pcsv.el
 
 TEST_EL := pcsv-test.el
+
+##
+## Emacs
+##
+
+EMACS ?= emacs
+
+BATCH := $(EMACS) -Q -batch -L .
 
 ##
 ## package.el
