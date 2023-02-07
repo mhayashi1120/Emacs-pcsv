@@ -7,7 +7,7 @@
 EMACS ?= emacs
 NEEDED-PACKAGES ?=
 
-BATCH := $(EMACS) -Q -batch
+BATCH := $(EMACS) -Q -batch -L .
 
 EL := pcsv.el
 
