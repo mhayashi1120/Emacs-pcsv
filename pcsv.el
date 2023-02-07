@@ -110,7 +110,7 @@
 ;; 2. read just a char in a loop
 ;; 3. hybrid of 1. and 2.
 
-;; first version of pcsv.el was 1. 
+;; first version of pcsv.el was 1.
 ;;   but this version call too many `replace-regexp-in-string' to replace `"' (double quote).
 ;; next pcsv.el was 2.
 ;;   this version slow down when parsing huge csv.
