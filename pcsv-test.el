@@ -17,7 +17,7 @@
   (should (equal (pcsv-test-get "a") '(("a"))))
   (should (equal (pcsv-test-get "a,") '(("a" ""))))
   (should (equal (pcsv-test-get
-                  "a,b,c\n\"a,a\",\"bb\n\",\"c,\nc\"\n\"\"\"aaa\"\"\",\",\"\",\"\n") 
+                  "a,b,c\n\"a,a\",\"bb\n\",\"c,\nc\"\n\"\"\"aaa\"\"\",\",\"\",\"\n")
                  '(("a" "b" "c") ("a,a" "bb\n" "c,\nc") ("\"aaa\"" ",\",")))))
 
 (ert-deftest pcsv-normal-test2 ()
