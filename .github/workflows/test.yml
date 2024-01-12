@@ -29,16 +29,6 @@ jobs:
           - 28.2
           - 29.1
           - snapshot
-        exclude:
-          - os: macos-latest
-            emacs_version: 24.1
-          - os: macos-latest
-            emacs_version: 24.2
-        include:
-          - emacs_version: 24.1
-            lint_ignore: 1
-          - emacs_version: 24.2
-            lint_ignore: 1
     env:
       EMACS_LINT_IGNORE: ${{ matrix.lint_ignore }}
     steps:
